@@ -6,7 +6,7 @@ Tested up to: 7.1
 Requires PHP: 7.4
 WC requires at least: 8.0
 WC tested up to: 11.2
-Stable tag: 2.0.13
+Stable tag: 2.0.14
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -37,6 +37,9 @@ Para instalarlas sin intervención, activa "Habilitar actualizaciones automátic
 
 == Changelog ==
 
+= 2.0.14 =
+* Corrección: el webhook de Plenopay ya no guarda en la base de datos los datos de la última notificación recibida (opción `webhook_debug`). La opción existente se elimina al actualizar.
+
 = 2.0.13 =
 * Nuevo: actualizaciones del plugin desde el panel de WordPress (manuales o automáticas).
 * Corrección: el script del checkout por bloques se versiona con la versión del plugin para evitar que el navegador use una copia antigua tras actualizar.
@@ -45,6 +48,9 @@ Para instalarlas sin intervención, activa "Habilitar actualizaciones automátic
 * Última versión distribuida manualmente. Para actualizar a 2.0.13 se debe subir el zip una única vez.
 
 == Upgrade Notice ==
+
+= 2.0.14 =
+Si tienes una versión anterior a 2.0.13, instala esta versión manualmente una vez; a partir de ella las nuevas versiones llegan desde el panel de WordPress.
 
 = 2.0.13 =
 Instala esta versión manualmente una vez; a partir de ella las nuevas versiones llegan desde el panel de WordPress.
