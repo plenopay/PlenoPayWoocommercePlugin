@@ -1,0 +1,10 @@
+# Release zips are published as GitHub Release assets, not committed
+*.zip
+!plenopay_woocommerce_plugin_v2.0.12.zip
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+.vscode/
+.idea/

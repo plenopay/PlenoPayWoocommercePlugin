@@ -1,0 +1,21 @@
+# Normalize line endings for source files
+*.php  text eol=lf
+*.js   text eol=lf
+*.txt  text eol=lf
+*.md   text eol=lf
+*.svg  text eol=lf
+*.yml  text eol=lf
+
+# Binary assets
+*.png  binary
+*.jpg  binary
+*.zip  binary
+*.mo   binary
+
+# Excluded from `git archive` exports — only plenopay-payment-method/ ships
+/.github        export-ignore
+/.gitattributes export-ignore
+/.gitignore     export-ignore
+/.distignore    export-ignore
+/README.md      export-ignore
+/*.zip          export-ignore

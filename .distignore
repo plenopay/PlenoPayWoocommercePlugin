@@ -1,0 +1,13 @@
+# Files excluded from the release zip (paths relative to plenopay-payment-method/).
+# Read by the release workflow when building plenopay-payment-method.zip.
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+*.zip
+*.log
+.git*
+node_modules
+tests
+composer.json
+composer.lock
+phpcs.xml
