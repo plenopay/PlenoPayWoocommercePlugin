@@ -10,7 +10,7 @@
     Requires at least: 6.0
     Requires PHP: 7.4
     WC requires at least: 8.0
-    WC tested up to: 10.2
+    WC tested up to: 11.2
     Text Domain: woocommerce-plenopay-gateway
     Update URI: https://github.com/plenopay/PlenoPayWoocommercePlugin
 */
