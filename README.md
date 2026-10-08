@@ -79,8 +79,6 @@ How to release `X.Y.Z`:
 A version with a suffix (`v2.1.0-rc1`) is published as a pre-release; installed plugins
 ignore pre-releases, so it can be downloaded for QA without reaching merchants.
 
-`plenopay_woocommerce_plugin_v2.0.12.zip` stays in the repo until the first GitHub
-Release (v2.0.13) exists, then it is removed.
+Versions up to 2.0.12 were distributed as zips committed to this repo; they remain in
+the git history. From 2.0.13 on, download them from GitHub Releases.
 
-See `woocommerce_plugin_auto_updates_plan.md` (Plenopay workspace) for the
-automatic-updates roadmap: Plugin Update Checker + GitHub Releases + release workflow.
