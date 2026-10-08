@@ -6,7 +6,7 @@
     Author: Plenopay
     Author URI: https://www.plenopay.com/integracion-woocommerce
     License: MIT
-    Version: 2.0.13
+    Version: 2.0.14
     Requires at least: 6.0
     Requires PHP: 7.4
     WC requires at least: 8.0
@@ -18,7 +18,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Keep in sync with the Version header above (the release workflow checks both).
-define( 'PLENOPAY_VERSION', '2.0.13' );
+define( 'PLENOPAY_VERSION', '2.0.14' );
 
 // ─── Automatic updates (GitHub Releases) ──────────────────────────────────────
 // Registered before the WooCommerce check so the plugin keeps receiving updates
@@ -57,8 +57,11 @@ function wc_plenopay_maybe_upgrade() {
     $installed = get_option( 'plenopay_version' );
     if ( $installed === PLENOPAY_VERSION ) return;
 
-    // Future migrations go here, e.g.:
-    // if ( $installed && version_compare( $installed, '2.1.0', '<' ) ) { ... }
+    // 2.0.14: webhook() no longer stores the last request; drop the leftover option.
+    // Runs on fresh installs too, because 2.0.12 and older never set plenopay_version.
+    if ( ! $installed || version_compare( $installed, '2.0.14', '<' ) ) {
+        delete_option( 'webhook_debug' );
+    }
 
     update_option( 'plenopay_version', PLENOPAY_VERSION );
 }
@@ -263,8 +266,6 @@ function wc_plenopay_gateway_init() {
                 ) );
                 wc_restock_refunded_items( $order, $order->get_items() );
             }
-
-            update_option( 'webhook_debug', $_GET );
         }
     }
 }
