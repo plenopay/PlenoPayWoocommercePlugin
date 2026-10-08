@@ -2,10 +2,10 @@
 Contributors: plenopay
 Tags: woocommerce, payments, installments, bnpl, plenopay
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 7.4
 WC requires at least: 8.0
-WC tested up to: 10.2
+WC tested up to: 11.2
 Stable tag: 2.0.13
 License: MIT
 License URI: https://opensource.org/licenses/MIT
