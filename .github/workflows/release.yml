@@ -1,0 +1,140 @@
+# Builds plenopay-payment-method.zip and publishes it as a GitHub Release.
+# Installed plugins (v2.0.13+) pick up the release through Plugin Update Checker.
+#
+#   Pull request to main → lint only
+#   Tag v*               → lint, verify versions, build zip, create release
+#
+# Release steps: bump Version header + PLENOPAY_VERSION + readme.txt (Stable tag and
+# changelog) on develop → PR to main → merge → git tag vX.Y.Z on main → push the tag.
+
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PLUGIN_DIR: plenopay-payment-method
+  MAIN_FILE: plenopay-payment-method/plugin_plenopay.php
+  README_FILE: plenopay-payment-method/readme.txt
+
+jobs:
+  lint:
+    name: PHP lint (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: [ '7.4', '8.3' ]   # minimum supported (Requires PHP) and current
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+
+      - name: php -l
+        run: |
+          find "$PLUGIN_DIR" -name '*.php' -print0 \
+            | xargs -0 -n1 php -l > /tmp/lint.log 2>&1 \
+            || { grep -v '^No syntax errors' /tmp/lint.log; exit 1; }
+          echo "Linted $(grep -c '^No syntax errors' /tmp/lint.log) files"
+
+  release:
+    name: Build and publish release
+    needs: lint
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Tag must point to a commit on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME is not on main. Merge to main first, then tag main."
+            exit 1
+          fi
+
+      - name: Verify versions match the tag
+        id: version
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          VERSION="${TAG#v}"
+
+          HEADER=$(grep -m1 -E '^[[:space:]]*Version:' "$MAIN_FILE" | sed -E 's/.*Version:[[:space:]]*//' | tr -d '\r[:space:]')
+          CONST=$(grep -m1 -oP "define\(\s*'PLENOPAY_VERSION',\s*'\K[^']+" "$MAIN_FILE" || true)
+          STABLE=$(grep -m1 -E '^Stable tag:' "$README_FILE" | sed -E 's/^Stable tag:[[:space:]]*//' | tr -d '\r[:space:]')
+
+          echo "tag=$VERSION header=$HEADER PLENOPAY_VERSION=$CONST stable_tag=$STABLE"
+          FAIL=0
+          [ "$HEADER" = "$VERSION" ] || { echo "::error file=$MAIN_FILE::Version header ($HEADER) != tag ($VERSION)"; FAIL=1; }
+          [ "$CONST"  = "$VERSION" ] || { echo "::error file=$MAIN_FILE::PLENOPAY_VERSION ($CONST) != tag ($VERSION)"; FAIL=1; }
+          [ "$STABLE" = "$VERSION" ] || { echo "::error file=$README_FILE::Stable tag ($STABLE) != tag ($VERSION)"; FAIL=1; }
+          [ "$FAIL" = 0 ] || exit 1
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Versions with a suffix (2.1.0-rc1) are published as pre-releases; installed plugins ignore them.
+          if [[ "$VERSION" == *-* ]]; then echo "prerelease=true"; else echo "prerelease=false"; fi >> "$GITHUB_OUTPUT"
+
+      - name: Verify vendored update checker matches the code
+        run: |
+          NS=$(grep -m1 -oP 'v5p\d+(?=\\Vcs\\Api)' "$MAIN_FILE")
+          LOADER="$PLUGIN_DIR/vendor/plugin-update-checker/load-$NS.php"
+          [ -f "$LOADER" ] || { echo "::error file=$MAIN_FILE::Code references $NS but $LOADER is missing"; exit 1; }
+          echo "Plugin Update Checker $NS OK"
+
+      - name: Extract changelog for this version
+        run: |
+          awk -v v="${{ steps.version.outputs.version }}" '
+            /^== Changelog ==/      { inlog = 1; next }
+            inlog && /^== /         { exit }
+            inlog && $0 == "= " v " =" { grab = 1; next }
+            grab && /^= /           { exit }
+            grab                    { print }
+          ' "$README_FILE" | sed -e '/./,$!d' > /tmp/release-notes.md
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "::error file=$README_FILE::No '= ${{ steps.version.outputs.version }} =' entry under == Changelog =="
+            exit 1
+          fi
+          cat /tmp/release-notes.md
+
+      - name: Build zip
+        run: |
+          mkdir -p build
+          rsync -a --exclude-from=.distignore "$PLUGIN_DIR/" "build/$PLUGIN_DIR/"
+          (cd build && zip -rq "$PLUGIN_DIR.zip" "$PLUGIN_DIR")
+
+          # The zip root must be exactly plenopay-payment-method/ with the main file inside.
+          unzip -Z1 "build/$PLUGIN_DIR.zip" > /tmp/zip.txt
+          if grep -qv "^$PLUGIN_DIR/" /tmp/zip.txt; then
+            echo "::error::Zip contains entries outside $PLUGIN_DIR/"; exit 1
+          fi
+          grep -qx "$MAIN_FILE" /tmp/zip.txt || { echo "::error::$MAIN_FILE missing from zip"; exit 1; }
+          echo "$(wc -l < /tmp/zip.txt) entries, $(du -h "build/$PLUGIN_DIR.zip" | cut -f1)"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ARGS=()
+          [ "${{ steps.version.outputs.prerelease }}" = "true" ] && ARGS+=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" "build/$PLUGIN_DIR.zip" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file /tmp/release-notes.md \
+            "${ARGS[@]}"
